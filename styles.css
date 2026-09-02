@@ -1087,3 +1087,23 @@ td input:focus {
 }
 
 .badge-maint { background: #E2E8F0; color: #475569; }
+
+
+/* Clickable customer/room filter stat cards */
+.stat-card.clickable {
+  cursor: pointer;
+  border: 2px solid transparent;
+  background: var(--surface, #fff);
+  text-align: left;
+  font: inherit;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.stat-card.clickable:hover {
+  border-color: #c4b5fd;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.12);
+}
+.stat-card.clickable.active {
+  border-color: var(--primary, #6D28D9);
+  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.15);
+}
