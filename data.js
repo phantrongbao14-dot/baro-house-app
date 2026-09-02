@@ -1,1 +1,1 @@
-FILE:/workspace/baro-house-app/data.js
+PLACEHOLDER_LOAD_FROM_PATH
