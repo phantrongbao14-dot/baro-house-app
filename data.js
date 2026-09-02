@@ -239,17 +239,53 @@ window.BARO_SEED = {
         {
           code: "316",
           name: "Tòa nhà 316",
-          address: "316 Đường mẫu, TP.HCM",
+          address: "316 Đường mẫu, phường Bình Lợi Trung, TP.HCM",
           floors: 6,
           manager: "Nguyễn Khoa Triều Sơn",
+          collectDay: "ngày 1",
+          electricRate: 3500,
+          waterRate: 20000,
+          serviceFee: 50000,
+          vehicleFee: 100000,
           seeded: true
         },
         {
           code: "316A",
           name: "Tòa nhà 316A",
-          address: "316A Đường mẫu, TP.HCM",
+          address: "316A Đường mẫu, phường Bình Lợi Trung, TP.HCM",
           floors: 4,
           manager: "Trịnh Minh Khang",
+          collectDay: "ngày 5",
+          electricRate: 3500,
+          waterRate: 20000,
+          serviceFee: 50000,
+          vehicleFee: 100000,
+          seeded: false
+        },
+        {
+          code: "222",
+          name: "Tòa nhà 222",
+          address: "222 Nguyễn Văn Đậu, phường Bình Lợi Trung, TP.HCM",
+          floors: 5,
+          manager: "Phạm Quang Hiếu",
+          collectDay: "ngày 1",
+          electricRate: 3500,
+          waterRate: 22000,
+          serviceFee: 45000,
+          vehicleFee: 100000,
+          seeded: false
+        },
+        {
+          code: "183",
+          name: "Tòa nhà 183",
+          address: "183 Nguyễn Văn Đậu, phường Bình Lợi Trung, TP.HCM",
+          floors: 5,
+          manager: "Nguyễn Trường Dũ",
+          collectDay: "ngày 3",
+          electricRate: 3600,
+          waterRate: 20000,
+          serviceFee: 50000,
+          vehicleFee: 120000,
           seeded: false
         }
       ]
@@ -258,7 +294,34 @@ window.BARO_SEED = {
       id: "kv2",
       code: "KV2",
       name: "Khu vực 2",
-      buildings: []
+      buildings: [
+        {
+          code: "67A",
+          name: "Tòa nhà 67A",
+          address: "67A Đường mẫu KV2, TP.HCM",
+          floors: 4,
+          manager: "Phạm Quốc Trung",
+          collectDay: "ngày 1",
+          electricRate: 3500,
+          waterRate: 20000,
+          serviceFee: 40000,
+          vehicleFee: 100000,
+          seeded: false
+        },
+        {
+          code: "71A",
+          name: "Tòa nhà 71A",
+          address: "71A Đường mẫu KV2, TP.HCM",
+          floors: 6,
+          manager: "Trịnh Minh Khang",
+          collectDay: "ngày 10",
+          electricRate: 3500,
+          waterRate: 21000,
+          serviceFee: 50000,
+          vehicleFee: 100000,
+          seeded: false
+        }
+      ]
     }
   ],
 
@@ -287,7 +350,12 @@ window.BARO_SEED = {
   buildingsList: [
     { code: "316", name: "Tòa nhà 316" },
     { code: "316A", name: "Tòa nhà 316A (stub)" },
+    { code: "222", name: "Tòa nhà 222 (stub)" },
+    { code: "183", name: "Tòa nhà 183 (stub)" },
+    { code: "67A", name: "Tòa nhà 67A (stub)" },
+    { code: "71A", name: "Tòa nhà 71A (stub)" },
   ],
+  seedRev: 4,
 
   rooms: [
     // Floor G
