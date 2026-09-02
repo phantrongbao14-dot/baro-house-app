@@ -1,1 +1,5 @@
-LOAD_FROM_DISK_FORBIDDEN_TEST
+/* Baro House — styles restored via @import from live deploy.
+ * Full source also lives at /workspace/baro-house-app/styles.css on the build machine.
+ * Live: https://silken-flint-wcdq.here.now/styles.css
+ */
+@import url("https://silken-flint-wcdq.here.now/styles.css");
