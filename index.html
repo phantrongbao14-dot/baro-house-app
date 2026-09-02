@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Baro House — Tòa nhà 316</title>
+  <title>Baro House — Dự án vận hành</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -16,7 +16,7 @@
     <div class="sidebar-brand">
       <h1>Baro House</h1>
       <div class="sub" id="sidebarBuilding">Tòa nhà 316</div>
-      <div class="meta">Khu vực 1 · Quản lý Sơn</div>
+      <div class="meta" id="sidebarMeta">Khu vực 1 · Quản lý Sơn</div>
     </div>
     <nav class="nav" id="nav">
       <button class="nav-item active" data-tab="rooms">
@@ -32,7 +32,7 @@
         <span class="icon">✅</span> Kiểm tra Bill
       </button>
       <button class="nav-item" data-tab="bao-cao">
-        <span class="icon">📊</span> Báo cáo
+        <span class="icon">📊</span> Báo cáo tòa
       </button>
       <button class="nav-item" data-tab="customers">
         <span class="icon">👥</span> Khách hàng
@@ -47,33 +47,124 @@
         <span class="icon">📥</span> Import / Export CSV
       </button>
     </nav>
-    <div class="sidebar-footer">MVP demo · Lộ trình làm app</div>
+    <div class="sidebar-footer">MVP demo · Schema v3</div>
   </aside>
 
-  <div class="main">
+  <div class="main" id="mainShell">
     <header class="topbar">
       <div style="display:flex;align-items:center;gap:0.75rem;">
-        <button class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
+        <button class="btn btn-sm btn-back" id="btnBack" type="button" style="display:none" aria-label="Quay lại">← Quay lại</button>
+        <button class="menu-toggle" id="menuToggle" aria-label="Menu" style="display:none">☰</button>
         <div>
-          <h2 id="pageTitle">Sơ đồ phòng</h2>
-          <div class="breadcrumb">Baro House · Tòa nhà 316</div>
+          <h2 id="pageTitle">Baro House</h2>
+          <div class="breadcrumb" id="breadcrumb">Baro House</div>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
-        <div class="building-picker" id="buildingPicker">
+        <div class="building-picker" id="buildingPicker" style="display:none">
           <label for="buildingSelect">Tòa</label>
-          <select id="buildingSelect" aria-label="Chọn tòa">
-            <option value="316">316</option>
-            <option value="316A">316A</option>
-          </select>
+          <select id="buildingSelect" aria-label="Chọn tòa"></select>
         </div>
         <div class="topbar-actions" id="topbarActions"></div>
       </div>
     </header>
 
     <main class="content">
+      <!-- Level 1: Company home -->
+      <section class="shell-pane active" id="shell-home">
+        <div class="home-hero">
+          <div>
+            <h3>Dự án vận hành Baro House</h3>
+            <p>Chọn khu vực để quản lý tòa nhà, hoặc xem nhân viên / báo cáo toàn công ty.</p>
+          </div>
+        </div>
+        <div class="section-label">Khu vực</div>
+        <div class="card-grid" id="areaGrid"></div>
+        <div class="home-actions">
+          <button class="btn btn-primary" type="button" onclick="App.promptCreateArea()">＋ Tạo khu vực</button>
+        </div>
+        <div class="section-label" style="margin-top:1.5rem">Công ty</div>
+        <div class="card-grid card-grid-2">
+          <button type="button" class="nav-card" onclick="App.goEmployees()">
+            <span class="nav-card-icon">👥</span>
+            <div>
+              <strong>Nhân viên</strong>
+              <div class="muted">Danh sách từ sheet · <span id="empCountHome">0</span> người</div>
+            </div>
+          </button>
+          <button type="button" class="nav-card" onclick="App.goCeoReport()">
+            <span class="nav-card-icon">📊</span>
+            <div>
+              <strong>Báo cáo</strong>
+              <div class="muted">Dashboard CEO · toàn công ty</div>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Level 2: Area buildings -->
+      <section class="shell-pane" id="shell-area">
+        <div class="section-label" id="areaSectionLabel">Tòa nhà trong khu vực</div>
+        <div class="card-grid" id="buildingGrid"></div>
+        <div class="home-actions">
+          <button class="btn btn-primary" type="button" onclick="App.openCreateBuildingModal()">＋ Tạo tòa nhà</button>
+        </div>
+      </section>
+
+      <!-- Company: Employees -->
+      <section class="shell-pane" id="shell-employees">
+        <div class="card">
+          <div class="card-header">
+            <h3>Danh sách nhân viên</h3>
+            <span class="muted" id="empCountLabel">0 người</span>
+          </div>
+          <div class="card-body table-wrap">
+            <table>
+              <thead>
+                <tr><th>STT</th><th>Họ và tên</th><th>Chức danh</th></tr>
+              </thead>
+              <tbody id="employeeTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Company: CEO report (reuses report DOM via clone targets) -->
+      <section class="shell-pane" id="shell-ceo-report">
+        <div class="note-box">
+          <span>📊</span>
+          <div><strong>Báo cáo CEO:</strong> Tổng hợp toàn công ty (demo từ dữ liệu tòa đang seed).</div>
+        </div>
+        <div class="stats-row" id="ceoReportTiles"></div>
+        <div class="report-grid">
+          <div class="card">
+            <div class="card-header"><h3>Doanh thu theo tháng</h3></div>
+            <div class="card-body" id="ceoBarChart"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Cơ cấu thu (tháng gần nhất)</h3></div>
+            <div class="card-body" id="ceoDonutChart"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-header"><h3>Theo tòa</h3></div>
+          <div class="card-body table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tòa</th><th>Khu vực</th><th>Quản lý</th><th>Tầng</th>
+                </tr>
+              </thead>
+              <tbody id="ceoBuildingRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Level 3: Building module -->
+      <section class="shell-pane" id="shell-building">
       <!-- 1. Sơ đồ phòng + Kho sub-tabs -->
-      <section class="tab-pane active" id="tab-rooms">
+      <div class="tab-pane active" id="tab-rooms">
         <div class="sub-tabs" id="roomsSubTabs">
           <button class="sub-tab active" data-sub="phong">Phòng</button>
           <button class="sub-tab" data-sub="kho">Kho</button>
@@ -92,10 +183,10 @@
             <div class="card-body" id="warehouseList"></div>
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- 2. Hợp đồng thuê -->
-      <section class="tab-pane" id="tab-contracts">
+      <div class="tab-pane" id="tab-contracts">
         <div class="deposit-banner" id="depositBanner"></div>
         <div class="stats-row" id="contractStats"></div>
         <div class="card">
@@ -110,10 +201,10 @@
             <div class="contract-list" id="contractList"></div>
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- 3. Thu tiền kỳ -->
-      <section class="tab-pane" id="tab-thu-tien">
+      <div class="tab-pane" id="tab-thu-tien">
         <div class="note-box">
           <span>ℹ️</span>
           <div>
@@ -122,10 +213,10 @@
           </div>
         </div>
         <div id="createRevenuePeriods"></div>
-      </section>
+      </div>
 
       <!-- 4. Kiểm tra Bill -->
-      <section class="tab-pane" id="tab-kiem-tra-bill">
+      <div class="tab-pane" id="tab-kiem-tra-bill">
         <div class="note-box">
           <span>✅</span>
           <div>
@@ -135,10 +226,10 @@
         </div>
         <div class="stats-row" id="billCheckStats"></div>
         <div id="billCheckList"></div>
-      </section>
+      </div>
 
-      <!-- 5. Báo cáo -->
-      <section class="tab-pane" id="tab-bao-cao">
+      <!-- 5. Báo cáo tòa -->
+      <div class="tab-pane" id="tab-bao-cao">
         <div class="stats-row" id="reportTiles"></div>
         <div class="report-grid">
           <div class="card">
@@ -163,10 +254,10 @@
             </table>
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- 6. Khách hàng -->
-      <section class="tab-pane" id="tab-customers">
+      <div class="tab-pane" id="tab-customers">
         <div class="stats-row" id="customerStats"></div>
         <div class="card">
           <div class="card-header">
@@ -193,10 +284,10 @@
             </table>
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- 7. Thống kê xe -->
-      <section class="tab-pane" id="tab-vehicles">
+      <div class="tab-pane" id="tab-vehicles">
         <div class="card">
           <div class="card-header">
             <h3>Thống kê xe trong tòa nhà</h3>
@@ -209,10 +300,10 @@
             <div class="vehicle-grid" id="vehicleGrid"></div>
           </div>
         </div>
-      </section>
+      </div>
 
       <!-- 8. Cấu hình tòa -->
-      <section class="tab-pane" id="tab-cau-hinh">
+      <div class="tab-pane" id="tab-cau-hinh">
         <div class="card">
           <div class="card-header">
             <h3>Cấu hình tòa nhà</h3>
@@ -220,10 +311,10 @@
           </div>
           <div class="card-body" id="buildingConfigForm"></div>
         </div>
-      </section>
+      </div>
 
       <!-- 9. Import / Export CSV -->
-      <section class="tab-pane" id="tab-csv">
+      <div class="tab-pane" id="tab-csv">
         <div class="card">
           <div class="card-header"><h3>Import / Export CSV</h3></div>
           <div class="card-body">
@@ -240,6 +331,7 @@
             </p>
           </div>
         </div>
+      </div>
       </section>
     </main>
   </div>
