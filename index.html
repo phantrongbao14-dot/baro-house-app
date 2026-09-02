@@ -15,7 +15,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <h1>Baro House</h1>
-      <div class="sub">Tòa nhà 316</div>
+      <div class="sub" id="sidebarBuilding">Tòa nhà 316</div>
       <div class="meta">Khu vực 1 · Quản lý Sơn</div>
     </div>
     <nav class="nav" id="nav">
@@ -25,17 +25,26 @@
       <button class="nav-item" data-tab="contracts">
         <span class="icon">📄</span> Hợp đồng thuê
       </button>
-      <button class="nav-item" data-tab="create-revenue">
-        <span class="icon">📅</span> Tạo kỳ doanh thu
+      <button class="nav-item" data-tab="thu-tien">
+        <span class="icon">📅</span> Thu tiền kỳ
       </button>
-      <button class="nav-item" data-tab="revenue">
-        <span class="icon">💰</span> Doanh thu tòa nhà
+      <button class="nav-item" data-tab="kiem-tra-bill">
+        <span class="icon">✅</span> Kiểm tra Bill
+      </button>
+      <button class="nav-item" data-tab="bao-cao">
+        <span class="icon">📊</span> Báo cáo
       </button>
       <button class="nav-item" data-tab="customers">
         <span class="icon">👥</span> Khách hàng
       </button>
       <button class="nav-item" data-tab="vehicles">
         <span class="icon">🛵</span> Thống kê xe
+      </button>
+      <button class="nav-item" data-tab="cau-hinh">
+        <span class="icon">⚙️</span> Cấu hình tòa
+      </button>
+      <button class="nav-item" data-tab="csv">
+        <span class="icon">📥</span> Import / Export CSV
       </button>
     </nav>
     <div class="sidebar-footer">MVP demo · Lộ trình làm app</div>
@@ -50,23 +59,52 @@
           <div class="breadcrumb">Baro House · Tòa nhà 316</div>
         </div>
       </div>
-      <div class="topbar-actions" id="topbarActions"></div>
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <div class="building-picker" id="buildingPicker">
+          <label for="buildingSelect">Tòa</label>
+          <select id="buildingSelect" aria-label="Chọn tòa">
+            <option value="316">316</option>
+            <option value="316A">316A</option>
+          </select>
+        </div>
+        <div class="topbar-actions" id="topbarActions"></div>
+      </div>
     </header>
 
     <main class="content">
-      <!-- 1. Sơ đồ phòng -->
+      <!-- 1. Sơ đồ phòng + Kho sub-tabs -->
       <section class="tab-pane active" id="tab-rooms">
-        <div class="legend" id="roomLegend"></div>
-        <div id="roomMap"></div>
+        <div class="sub-tabs" id="roomsSubTabs">
+          <button class="sub-tab active" data-sub="phong">Phòng</button>
+          <button class="sub-tab" data-sub="kho">Kho</button>
+        </div>
+        <div id="roomsSubPhong">
+          <div class="stats-row clickable-stats" id="roomStatTiles"></div>
+          <div class="legend" id="roomLegend"></div>
+          <div id="roomMap"></div>
+        </div>
+        <div id="roomsSubKho" style="display:none">
+          <div class="card">
+            <div class="card-header">
+              <h3>Kho tài sản</h3>
+              <button class="btn btn-primary btn-sm" onclick="App.openAddWarehouseAsset()">＋ Thêm vào kho</button>
+            </div>
+            <div class="card-body" id="warehouseList"></div>
+          </div>
+        </div>
       </section>
 
       <!-- 2. Hợp đồng thuê -->
       <section class="tab-pane" id="tab-contracts">
+        <div class="deposit-banner" id="depositBanner"></div>
         <div class="stats-row" id="contractStats"></div>
         <div class="card">
           <div class="card-header">
             <h3>Danh sách hợp đồng</h3>
-            <button class="btn btn-primary btn-sm" onclick="App.openContractModal()">＋ Lập HĐ thuê</button>
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="App.openContractModal()">＋ Lập HĐ thuê</button>
+              <button class="btn btn-sm" onclick="App.openDepositContractModal()">＋ Tạo HĐ cọc</button>
+            </div>
           </div>
           <div class="card-body">
             <div class="contract-list" id="contractList"></div>
@@ -74,25 +112,60 @@
         </div>
       </section>
 
-      <!-- 3. Tạo kỳ doanh thu -->
-      <section class="tab-pane" id="tab-create-revenue">
+      <!-- 3. Thu tiền kỳ -->
+      <section class="tab-pane" id="tab-thu-tien">
         <div class="note-box">
           <span>ℹ️</span>
           <div>
-            <strong>Quy tắc:</strong> Chỉ mở kỳ doanh thu tiếp theo theo tuần tự.
-            Kỳ sau chỉ được mở khi kỳ trước đã lưu bill. Các trường Điện / Nước / Phí phát sinh / Tiền phòng có thể chỉnh sửa.
+            <strong>Thu tiền kỳ:</strong> Nhập chỉ số Điện/Nước, phí phát sinh, đã thu CK.
+            Chỉ mở kỳ tiếp theo khi kỳ trước đã lưu. Bill breakdown: Phòng · Điện · Nước · Xe · DV · Phát sinh · Thiếu/Dư.
           </div>
         </div>
         <div id="createRevenuePeriods"></div>
       </section>
 
-      <!-- 4. Doanh thu tòa nhà -->
-      <section class="tab-pane" id="tab-revenue">
-        <div class="stats-row" id="revenueStats"></div>
-        <div id="buildingRevenue"></div>
+      <!-- 4. Kiểm tra Bill -->
+      <section class="tab-pane" id="tab-kiem-tra-bill">
+        <div class="note-box">
+          <span>✅</span>
+          <div>
+            <strong>Quy trình duyệt bill:</strong>
+            Chưa gửi KT → Đã lưu → Yêu cầu lập bill → Đã gửi KT chờ duyệt → KT đã duyệt → Xuất/Share bill.
+          </div>
+        </div>
+        <div class="stats-row" id="billCheckStats"></div>
+        <div id="billCheckList"></div>
       </section>
 
-      <!-- 5. Khách hàng -->
+      <!-- 5. Báo cáo -->
+      <section class="tab-pane" id="tab-bao-cao">
+        <div class="stats-row" id="reportTiles"></div>
+        <div class="report-grid">
+          <div class="card">
+            <div class="card-header"><h3>Doanh thu theo tháng</h3></div>
+            <div class="card-body" id="barChart"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><h3>Cơ cấu thu (tháng gần nhất)</h3></div>
+            <div class="card-body" id="donutChart"></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-header"><h3>Theo tòa</h3></div>
+          <div class="card-body table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tòa</th><th>Tỷ lệ lấp đầy</th><th>Phải thu</th><th>Đã thu</th><th>Chưa thu</th><th>Tỷ lệ thu</th><th>Cọc đang giữ</th>
+                </tr>
+              </thead>
+              <tbody id="reportBuildingRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Khách hàng -->
       <section class="tab-pane" id="tab-customers">
         <div class="card">
           <div class="card-header">
@@ -110,6 +183,7 @@
                   <th>CCCD</th>
                   <th>Ngày sinh</th>
                   <th>Phòng</th>
+                  <th>Vai trò</th>
                   <th>Trạng thái</th>
                   <th></th>
                 </tr>
@@ -120,7 +194,7 @@
         </div>
       </section>
 
-      <!-- 6. Thống kê xe -->
+      <!-- 7. Thống kê xe -->
       <section class="tab-pane" id="tab-vehicles">
         <div class="card">
           <div class="card-header">
@@ -128,7 +202,41 @@
             <button class="btn btn-primary btn-sm" onclick="App.openVehicleModal()">＋ Thêm xe</button>
           </div>
           <div class="card-body">
+            <div class="search-bar">
+              <input type="search" id="vehicleSearch" placeholder="Tìm biển số (bỏ dấu chấm/gạch/khoảng trắng)…" oninput="App.filterVehicles(this.value)" />
+            </div>
             <div class="vehicle-grid" id="vehicleGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. Cấu hình tòa -->
+      <section class="tab-pane" id="tab-cau-hinh">
+        <div class="card">
+          <div class="card-header">
+            <h3>Cấu hình tòa nhà</h3>
+            <button class="btn btn-primary btn-sm" onclick="App.saveBuildingConfig()">💾 Lưu</button>
+          </div>
+          <div class="card-body" id="buildingConfigForm"></div>
+        </div>
+      </section>
+
+      <!-- 9. Import / Export CSV -->
+      <section class="tab-pane" id="tab-csv">
+        <div class="card">
+          <div class="card-header"><h3>Import / Export CSV</h3></div>
+          <div class="card-body">
+            <div class="csv-actions">
+              <button class="btn btn-primary" onclick="App.exportCsvBuilding()">⬇ Xuất CSV tòa</button>
+              <button class="btn btn-primary" onclick="App.exportCsvRooms()">⬇ Xuất CSV phòng</button>
+              <label class="btn" style="cursor:pointer">
+                ⬆ Import CSV
+                <input type="file" accept=".csv,text/csv" style="display:none" onchange="App.importCsv(event)" />
+              </label>
+            </div>
+            <p style="margin-top:1rem;color:var(--text-muted);font-size:0.875rem">
+              Demo: xuất tải file CSV về máy; import đọc header + đếm dòng và toast kết quả.
+            </p>
           </div>
         </div>
       </section>
