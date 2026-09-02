@@ -1,0 +1,2 @@
+baro-house-app schema v2
+complete-mvp 2026-09-02
