@@ -12,6 +12,29 @@
 <body>
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
+  <!-- Outer shell sidebar (home / employees / ceo-report) -->
+  <aside class="shell-sidebar" id="shellSidebar">
+    <div class="shell-sidebar-brand">
+      <div class="md-avatar" aria-hidden="true">MD</div>
+      <div>
+        <div class="shell-brand-title">Quản lý tòa nhà</div>
+        <div class="shell-brand-sub">Module MD</div>
+      </div>
+    </div>
+    <nav class="shell-nav" id="shellNav">
+      <button type="button" class="shell-nav-item active" data-shell="home" onclick="App.goHome()">
+        <span class="icon">⌂</span> Danh sách tòa
+      </button>
+      <button type="button" class="shell-nav-item" data-shell="employees" onclick="App.goEmployees()">
+        <span class="icon">👤</span> Nhân sự
+      </button>
+      <button type="button" class="shell-nav-item" data-shell="ceo-report" onclick="App.goCeoReport()">
+        <span class="icon">📊</span> Báo cáo
+      </button>
+    </nav>
+    <div class="shell-sidebar-footer">Baro House · MD picker</div>
+  </aside>
+
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <h1>Baro House</h1>
@@ -54,7 +77,7 @@
     <header class="topbar">
       <div style="display:flex;align-items:center;gap:0.75rem;">
         <button class="btn btn-sm btn-back" id="btnBack" type="button" style="display:none" aria-label="Quay lại">← Quay lại</button>
-        <button class="menu-toggle" id="menuToggle" aria-label="Menu" style="display:none">☰</button>
+        <button class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button>
         <div>
           <h2 id="pageTitle">Baro House</h2>
           <div class="breadcrumb" id="breadcrumb">Baro House</div>
@@ -70,45 +93,26 @@
     </header>
 
     <main class="content">
-      <!-- Level 1: Company home -->
+      <!-- Level 1: Building list (MD picker) -->
       <section class="shell-pane active" id="shell-home">
-        <div class="home-hero">
-          <div>
-            <h3>Dự án vận hành Baro House</h3>
-            <p>Chọn khu vực để quản lý tòa nhà, hoặc xem nhân viên / báo cáo toàn công ty.</p>
-          </div>
+        <div class="md-home-header">
+          <h3>Danh sách tòa nhà</h3>
+          <p class="muted">Chọn tòa để quản lý phòng, hợp đồng và thu tiền</p>
         </div>
-        <div class="section-label">Khu vực</div>
-        <div class="card-grid" id="areaGrid"></div>
-        <div class="home-actions">
-          <button class="btn btn-primary" type="button" onclick="App.promptCreateArea()">＋ Tạo khu vực</button>
+        <div class="md-filter-tiles" id="homeFilterTiles" role="group" aria-label="Lọc theo khu vực">
+          <!-- filled by renderHome -->
         </div>
-        <div class="section-label" style="margin-top:1.5rem">Công ty</div>
-        <div class="card-grid card-grid-2">
-          <button type="button" class="nav-card" onclick="App.goEmployees()">
-            <span class="nav-card-icon">👥</span>
-            <div>
-              <strong>Nhân viên</strong>
-              <div class="muted">Danh sách từ sheet · <span id="empCountHome">0</span> người</div>
-            </div>
-          </button>
-          <button type="button" class="nav-card" onclick="App.goCeoReport()">
-            <span class="nav-card-icon">📊</span>
-            <div>
-              <strong>Báo cáo</strong>
-              <div class="muted">Dashboard CEO · toàn công ty</div>
-            </div>
-          </button>
+        <div class="home-actions md-home-actions">
+          <button class="btn btn-accent" type="button" onclick="App.openCreateBuildingModal()">＋ Tạo tòa nhà</button>
+          <button class="btn btn-accent-outline" type="button" onclick="App.resetData()">Nạp dữ liệu mẫu</button>
         </div>
+        <div class="md-building-list" id="buildingList"></div>
       </section>
 
-      <!-- Level 2: Area buildings -->
-      <section class="shell-pane" id="shell-area">
-        <div class="section-label" id="areaSectionLabel">Tòa nhà trong khu vực</div>
-        <div class="card-grid" id="buildingGrid"></div>
-        <div class="home-actions">
-          <button class="btn btn-primary" type="button" onclick="App.openCreateBuildingModal()">＋ Tạo tòa nhà</button>
-        </div>
+      <!-- Legacy area pane (redirected to home+filter) -->
+      <section class="shell-pane" id="shell-area" hidden aria-hidden="true">
+        <div id="areaSectionLabel"></div>
+        <div id="buildingGrid"></div>
       </section>
 
       <!-- Company: Employees -->
