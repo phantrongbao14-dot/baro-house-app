@@ -24,6 +24,7 @@
   let roomsSub = "phong";
   let vehicleQuery = "";
   let currentBuilding = "316";
+  let customerFilter = "living"; // living | moved | all
 
   function loadState() {
     try {
@@ -1636,20 +1637,26 @@
     const movedOut = state.tenants.filter((t) => t.active === false).length;
     const statsEl = document.getElementById("customerStats");
     if (statsEl) {
+      const livingActive = customerFilter === "living" ? " active" : "";
+      const movedActive = customerFilter === "moved" ? " active" : "";
       statsEl.innerHTML = `
-        <div class="stat-card">
+        <button type="button" class="stat-card clickable${livingActive}" onclick="App.setCustomerFilter('living')" aria-pressed="${customerFilter === "living"}">
           <div class="label">Khách đang ở trong tòa nhà</div>
           <div class="value success">${living}</div>
-        </div>
-        <div class="stat-card">
+        </button>
+        <button type="button" class="stat-card clickable${movedActive}" onclick="App.setCustomerFilter('moved')" aria-pressed="${customerFilter === "moved"}">
           <div class="label">Khách đã chuyển ra</div>
           <div class="value danger">${movedOut}</div>
-        </div>`;
+        </button>`;
     }
-    const list = state.tenants.slice().sort((a, b) => {
-      if ((a.active !== false) === (b.active !== false)) return (a.name || "").localeCompare(b.name || "", "vi");
-      return a.active === false ? 1 : -1;
-    });
+    let list = state.tenants.slice();
+    if (customerFilter === "living") list = list.filter((t) => t.active !== false);
+    else if (customerFilter === "moved") list = list.filter((t) => t.active === false);
+    list.sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi"));
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:1.5rem">Không có khách trong bộ lọc này</td></tr>`;
+      return;
+    }
     tbody.innerHTML = list
       .map((t, i) => {
         const role = t.role === "chu" ? "Chủ HĐ" : t.role === "ocung" ? "Ở cùng" : "—";
@@ -1672,6 +1679,13 @@
         </tr>`;
       })
       .join("");
+  }
+
+  function setCustomerFilter(key) {
+    // click same filter again → show all; otherwise apply filter
+    if (customerFilter === key) customerFilter = "all";
+    else customerFilter = key;
+    renderCustomers();
   }
 
   function openCustomerModal(id) {
@@ -2157,6 +2171,8 @@
   }
 
   window.App = {
+    setCustomerFilter,
+
     switchTab: switchTab,
     setRoomFilter: setRoomFilter,
     setRoomsSub: setRoomsSub,
