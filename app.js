@@ -26,6 +26,7 @@
   let currentBuilding = "316";
   let currentAreaId = "kv1";
   let shellView = "home"; // home | area | building | employees | ceo-report
+  let homeFilter = "all"; // all | kv1 | kv2 — clickable stat tiles on Danh sách tòa
   let customerFilter = "living"; // living | moved | all
 
   function emptyBuildingBundle(meta) {
@@ -124,6 +125,40 @@
     };
   }
 
+  function ensureSeedBuildings() {
+    const seedAreas = (window.BARO_SEED && window.BARO_SEED.areas) || [];
+    if (!state.areas) state.areas = [];
+    if (!state.buildingStore) state.buildingStore = {};
+    seedAreas.forEach((sa) => {
+      let area = state.areas.find((a) => a.id === sa.id || a.code === sa.code);
+      if (!area) {
+        area = deepClone(sa);
+        area.buildings = [];
+        state.areas.push(area);
+      }
+      (sa.buildings || []).forEach((sb) => {
+        if (!(area.buildings || []).some((b) => b.code === sb.code)) {
+          area.buildings = area.buildings || [];
+          area.buildings.push(deepClone(sb));
+        } else {
+          // refresh stub meta fields lightly
+          const existing = area.buildings.find((b) => b.code === sb.code);
+          if (existing && !existing.seeded) {
+            ["address", "manager", "collectDay", "electricRate", "waterRate", "serviceFee", "vehicleFee", "floors"].forEach((k) => {
+              if (sb[k] != null && (existing[k] == null || existing[k] === "")) existing[k] = sb[k];
+            });
+          }
+        }
+        if (!state.buildingStore[sb.code]) {
+          state.buildingStore[sb.code] = sb.seeded
+            ? seededBuildingBundle()
+            : emptyBuildingBundle({ ...sb, areaName: area.name });
+        }
+      });
+    });
+    state._seedRev = window.BARO_SEED.seedRev || 4;
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -134,6 +169,7 @@
           if (!state.employees || !state.employees.length) {
             state.employees = deepClone(window.BARO_SEED.employees);
           }
+          ensureSeedBuildings();
           currentBuilding = state.activeBuildingCode || "316";
           const bundle = state.buildingStore[currentBuilding];
           if (bundle) applyBundleToState(bundle);
@@ -167,6 +203,7 @@
     if (!store["316"]) store["316"] = seededBuildingBundle();
     state = {
       _schema: SCHEMA,
+      _seedRev: seed.seedRev || 4,
       employees: deepClone(seed.employees || []),
       areas,
       buildingStore: store,
@@ -433,37 +470,38 @@
     const back = document.getElementById("btnBack");
     const menu = document.getElementById("menuToggle");
     const sidebar = document.getElementById("sidebar");
-    const main = document.getElementById("mainShell");
+    const shellSidebar = document.getElementById("shellSidebar");
     const picker = document.getElementById("buildingPicker");
     const crumb = document.getElementById("breadcrumb");
     const title = document.getElementById("pageTitle");
 
     const onBuilding = shellView === "building";
+    // Treat legacy "area" as home (flat picker)
+    const effectiveShell = shellView === "area" ? "home" : shellView;
     document.body.classList.toggle("mode-building", onBuilding);
     document.body.classList.toggle("mode-shell", !onBuilding);
 
     if (sidebar) sidebar.style.display = onBuilding ? "" : "none";
-    if (main) {
-      if (onBuilding) main.style.marginLeft = "";
-      else main.style.marginLeft = "0";
-    }
-    if (menu) menu.style.display = onBuilding ? "" : "none";
-    if (picker) picker.style.display = "none"; // hierarchy replaces picker
-    if (back) back.style.display = shellView === "home" ? "none" : "";
+    if (shellSidebar) shellSidebar.style.display = onBuilding ? "none" : "";
+    if (picker) picker.style.display = "none";
+    if (back) back.style.display = onBuilding || effectiveShell === "employees" || effectiveShell === "ceo-report" ? "" : "none";
+    // menu-toggle visibility is CSS-driven (mobile only)
+    if (menu) menu.style.display = "";
 
     document.querySelectorAll(".shell-pane").forEach((p) => {
-      p.classList.toggle("active", p.id === "shell-" + shellView);
+      const want = onBuilding ? "shell-building" : "shell-" + effectiveShell;
+      p.classList.toggle("active", p.id === want);
     });
 
-    let crumbs = ["Baro House"];
-    let page = "Baro House";
-    if (shellView === "home") {
-      page = "Baro House";
-    } else if (shellView === "area") {
-      const a = getArea(currentAreaId);
-      crumbs.push(a ? a.name : "Khu vực");
-      page = a ? a.name : "Khu vực";
-    } else if (shellView === "building") {
+    document.querySelectorAll(".shell-nav-item").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.shell === effectiveShell);
+    });
+
+    let crumbs = ["Quản lý tòa nhà"];
+    let page = "Danh sách tòa nhà";
+    if (effectiveShell === "home") {
+      page = "Danh sách tòa nhà";
+    } else if (onBuilding) {
       const found = findBuildingMeta(currentBuilding);
       if (found) {
         crumbs.push(found.area.name);
@@ -479,15 +517,15 @@
       if (meta && found) {
         meta.textContent = found.area.name + " · " + (found.building.manager || "—");
       }
-    } else if (shellView === "employees") {
-      crumbs.push("Nhân viên");
-      page = "Nhân viên";
-    } else if (shellView === "ceo-report") {
+    } else if (effectiveShell === "employees") {
+      crumbs.push("Nhân sự");
+      page = "Nhân sự";
+    } else if (effectiveShell === "ceo-report") {
       crumbs.push("Báo cáo");
-      page = "Báo cáo CEO";
+      page = "Báo cáo";
     }
     if (crumb) crumb.textContent = crumbs.join(" › ");
-    if (title && shellView !== "building") title.textContent = page;
+    if (title && !onBuilding) title.textContent = page;
   }
 
   function goHome() {
@@ -502,80 +540,132 @@
   }
 
   function goArea(areaId) {
+    // Legacy area view → home with KV filter
     if (shellView === "building") persistActiveBuilding();
     currentAreaId = areaId || currentAreaId;
-    shellView = "area";
-    closePanel();
-    closeSidebar();
-    updateChrome();
-    renderArea();
-    document.getElementById("topbarActions").innerHTML = "";
-    saveState();
+    const a = getArea(currentAreaId);
+    if (a && /kv1/i.test(a.code || a.id || "")) homeFilter = "kv1";
+    else if (a && /kv2/i.test(a.code || a.id || "")) homeFilter = "kv2";
+    else homeFilter = "all";
+    goHome();
+  }
+
+  function setHomeFilter(key) {
+    // Clickable stat tiles: all | kv1 | kv2. Click active again → all.
+    if (key === homeFilter && key !== "all") homeFilter = "all";
+    else homeFilter = key || "all";
+    renderHome();
   }
 
   function goEmployees() {
+    if (shellView === "building") persistActiveBuilding();
     shellView = "employees";
     closePanel();
+    closeSidebar();
     updateChrome();
     renderEmployees();
     document.getElementById("topbarActions").innerHTML = "";
   }
 
   function goCeoReport() {
+    if (shellView === "building") persistActiveBuilding();
     shellView = "ceo-report";
     closePanel();
+    closeSidebar();
     updateChrome();
     renderCeoReport();
     document.getElementById("topbarActions").innerHTML = "";
   }
 
   function goBack() {
-    if (shellView === "building") goArea(currentAreaId);
+    if (shellView === "building") goHome();
     else if (shellView === "area" || shellView === "employees" || shellView === "ceo-report") goHome();
   }
 
+  function allBuildingsFlat() {
+    const rows = [];
+    (state.areas || []).forEach((a) => {
+      (a.buildings || []).forEach((b) => {
+        rows.push({ area: a, building: b });
+      });
+    });
+    rows.sort((x, y) => String(x.building.code).localeCompare(String(y.building.code), "vi", { numeric: true }));
+    return rows;
+  }
+
+  function fmtRateChip(label, val) {
+    if (val == null || val === "") return "";
+    const n = Number(val);
+    const s = Number.isFinite(n) ? n.toLocaleString("vi-VN") : String(val);
+    return `<span class="md-chip rate">${label} ${s}</span>`;
+  }
+
   function renderHome() {
-    const grid = document.getElementById("areaGrid");
-    const areas = state.areas || [];
-    grid.innerHTML = areas
-      .map((a) => {
-        const n = (a.buildings || []).length;
+    const flat = allBuildingsFlat();
+    const kv1 = flat.filter((r) => (r.area.code || "").toUpperCase() === "KV1" || r.area.id === "kv1");
+    const kv2 = flat.filter((r) => (r.area.code || "").toUpperCase() === "KV2" || r.area.id === "kv2");
+
+    const tiles = document.getElementById("homeFilterTiles");
+    if (tiles) {
+      const items = [
+        { key: "all", label: "Tổng số tòa nhà", count: flat.length },
+        { key: "kv1", label: "Khu vực 1", count: kv1.length },
+        { key: "kv2", label: "Khu vực 2", count: kv2.length },
+      ];
+      tiles.innerHTML = items
+        .map(
+          (it) => `
+        <button type="button" class="md-filter-tile${homeFilter === it.key ? " active" : ""}"
+          onclick="App.setHomeFilter('${it.key}')" aria-pressed="${homeFilter === it.key}">
+          <span class="label">${it.label}</span>
+          <span class="value">${it.count}</span>
+        </button>`
+        )
+        .join("");
+    }
+
+    let list = flat;
+    if (homeFilter === "kv1") list = kv1;
+    else if (homeFilter === "kv2") list = kv2;
+
+    const el = document.getElementById("buildingList");
+    if (!el) return;
+    if (!list.length) {
+      el.innerHTML = `<div class="empty-hint">Chưa có tòa nhà. Bấm 「＋ Tạo tòa nhà」 để thêm.</div>`;
+      return;
+    }
+    el.innerHTML = list
+      .map(({ area, building: b }) => {
+        const storeB = (state.buildingStore[b.code] && state.buildingStore[b.code].building) || {};
+        const elec = b.electricRate != null ? b.electricRate : storeB.electricRate;
+        const water = b.waterRate != null ? b.waterRate : storeB.waterRate;
+        const svc = b.serviceFee != null ? b.serviceFee : storeB.serviceFee;
+        const veh = b.vehicleFee != null ? b.vehicleFee : storeB.vehicleFee;
+        const collect = b.collectDay || storeB.collectDay || "";
+        const chips = [
+          `<span class="md-chip kv">${esc(area.code || area.name)}</span>`,
+          b.manager ? `<span class="md-chip mgr">${esc(b.manager)}</span>` : "",
+          collect ? `<span class="md-chip">Ngày thu: ${esc(collect)}</span>` : "",
+          fmtRateChip("Điện", elec),
+          fmtRateChip("Nước", water),
+          fmtRateChip("DV", svc),
+          fmtRateChip("Xe", veh),
+        ]
+          .filter(Boolean)
+          .join("");
         return `
-        <button type="button" class="nav-card area-card" onclick="App.goArea('${a.id}')">
-          <span class="nav-card-icon">🏢</span>
-          <div>
-            <strong>${esc(a.code)}</strong>
-            <div class="muted">${esc(a.name)} · ${n} tòa</div>
-          </div>
+        <button type="button" class="md-bldg-card" onclick="App.enterBuilding('${esc(b.code)}')">
+          <div class="md-bldg-code">${esc(b.code)}</div>
+          <div class="md-bldg-addr">${esc(b.address || "—")}</div>
+          <div class="md-bldg-chips">${chips}</div>
         </button>`;
       })
       .join("");
-    const empN = (state.employees || []).length;
-    const eh = document.getElementById("empCountHome");
-    if (eh) eh.textContent = String(empN);
   }
 
   function renderArea() {
-    const area = getArea(currentAreaId);
-    const label = document.getElementById("areaSectionLabel");
-    if (label) label.textContent = area ? "Tòa nhà — " + area.name : "Tòa nhà";
-    const grid = document.getElementById("buildingGrid");
-    const list = (area && area.buildings) || [];
-    if (!list.length) {
-      grid.innerHTML = `<div class="empty-hint">Chưa có tòa nhà. Bấm 「＋ Tạo tòa nhà」 để thêm.</div>`;
-      return;
-    }
-    grid.innerHTML = list
-      .map((b) => `
-        <button type="button" class="nav-card building-card" onclick="App.enterBuilding('${esc(b.code)}')">
-          <span class="nav-card-icon">🏠</span>
-          <div>
-            <strong>Tòa ${esc(b.code)}</strong>
-            <div class="muted">${esc(b.address || "—")}</div>
-            <div class="muted">QL: ${esc(b.manager || "—")} · ${b.floors || "—"} tầng</div>
-          </div>
-        </button>`)
-      .join("");
+    // Redirect legacy callers to filtered home
+    goHome();
   }
 
   function renderEmployees() {
@@ -681,18 +771,29 @@
 
   function openCreateBuildingModal() {
     const mgrOpts = managerEmployees()
-      .map((e) => `<option value="${esc(e.name)}">${esc(e.name)} — ${esc(e.title)}</option>`)
+      .map((e) => {
+        const sel = "";
+        return `<option value="${esc(e.name)}"${sel}>${esc(e.name)} — ${esc(e.title)}</option>`;
+      })
+      .join("");
+    const areaOpts = (state.areas || [])
+      .map((a) => {
+        const sel = a.id === currentAreaId || (homeFilter === "kv1" && a.id === "kv1") || (homeFilter === "kv2" && a.id === "kv2") ? " selected" : "";
+        return `<option value="${esc(a.id)}"${sel}>${esc(a.code)} — ${esc(a.name)}</option>`;
+      })
       .join("");
     openModal(
       "Tạo tòa nhà",
       `
+      <div class="form-group"><label>Khu vực *</label>
+        <select id="nb-area">${areaOpts}</select></div>
       <div class="form-group"><label>Mã tòa *</label>
         <input id="nb-code" placeholder="VD: 318" /></div>
       <div class="form-group"><label>Địa chỉ</label>
         <input id="nb-address" placeholder="Địa chỉ tòa nhà" /></div>
       <div class="form-group"><label>Số tầng</label>
         <input id="nb-floors" type="number" min="1" max="50" value="5" /></div>
-      <div class="form-group"><label>Quản lý tòa nhà</label>
+      <div class="form-group"><label>Chọn quản lý tòa nhà</label>
         <select id="nb-manager"><option value="">— Chọn quản lý —</option>${mgrOpts}</select></div>
       `,
       `<button class="btn" onclick="App.closeModal()">Hủy</button>
@@ -705,6 +806,7 @@
     const address = (document.getElementById("nb-address").value || "").trim();
     const floors = Number(document.getElementById("nb-floors").value) || 1;
     const manager = document.getElementById("nb-manager").value || "";
+    const areaId = (document.getElementById("nb-area") && document.getElementById("nb-area").value) || currentAreaId;
     if (!code) {
       toast("Nhập mã tòa", "error");
       return;
@@ -713,11 +815,12 @@
       toast("Mã tòa đã tồn tại", "error");
       return;
     }
-    const area = getArea(currentAreaId);
+    const area = getArea(areaId) || (state.areas || [])[0];
     if (!area) {
       toast("Không tìm thấy khu vực", "error");
       return;
     }
+    currentAreaId = area.id;
     const meta = {
       code,
       name: "Tòa nhà " + code,
@@ -726,12 +829,15 @@
       manager,
       seeded: false,
     };
+    area.buildings = area.buildings || [];
     area.buildings.push(meta);
     state.buildingStore[code] = emptyBuildingBundle({ ...meta, areaName: area.name });
     saveState();
     closeModal();
     toast("Đã tạo tòa " + code, "success");
-    renderArea();
+    shellView = "home";
+    renderHome();
+    updateChrome();
   }
 
   function enterBuilding(code) {
@@ -740,6 +846,10 @@
     if (!found) {
       toast("Không tìm thấy tòa " + code, "error");
       return;
+    }
+    const isFull = !!found.building.seeded || code === "316";
+    if (!isFull) {
+      toast("Demo: chỉ tòa 316 có dữ liệu đầy đủ", "info");
     }
     currentAreaId = found.area.id;
     currentBuilding = code;
@@ -806,11 +916,15 @@
   }
 
   function openSidebar() {
-    document.getElementById("sidebar").classList.add("open");
+    const target = shellView === "building" ? document.getElementById("sidebar") : document.getElementById("shellSidebar");
+    if (target) target.classList.add("open");
     document.getElementById("sidebarBackdrop").classList.add("open");
   }
   function closeSidebar() {
-    document.getElementById("sidebar").classList.remove("open");
+    const s = document.getElementById("sidebar");
+    const ss = document.getElementById("shellSidebar");
+    if (s) s.classList.remove("open");
+    if (ss) ss.classList.remove("open");
     document.getElementById("sidebarBackdrop").classList.remove("open");
   }
 
@@ -2400,15 +2514,19 @@
   /* ── Building config ── */
   function renderBuildingConfig() {
     const b = state.building;
+    const mgrOpts = managerEmployees()
+      .map((e) => `<option value="${esc(e.name)}"${e.name === b.manager ? " selected" : ""}>${esc(e.name)} — ${esc(e.title)}</option>`)
+      .join("");
     document.getElementById("buildingConfigForm").innerHTML = `
       <div class="form-row">
-        <div class="form-group"><label>Tên thương mại</label><input id="cfg-name" value="${esc(b.name)}" /></div>
+        <div class="form-group"><label>Chọn quản lý tòa nhà</label>
+          <select id="cfg-manager"><option value="">— Chọn quản lý —</option>${mgrOpts}</select></div>
         <div class="form-group"><label>Mã tòa</label><input id="cfg-code" value="${esc(b.code)}" /></div>
       </div>
       <div class="form-group"><label>Địa chỉ</label><input id="cfg-address" value="${esc(b.address)}" /></div>
       <div class="form-row">
         <div class="form-group"><label>Khu vực</label><input id="cfg-area" value="${esc(b.area)}" /></div>
-        <div class="form-group"><label>Quản lý</label><input id="cfg-manager" value="${esc(b.manager)}" /></div>
+        <div class="form-group"><label>Tên hiển thị</label><input id="cfg-name" value="${esc(b.name)}" /></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Số tầng</label><input type="number" id="cfg-floors" value="${b.floors || 6}" /></div>
@@ -2461,9 +2579,24 @@
     b.bankAccount = document.getElementById("cfg-bankAccount").value.trim();
     b.bankName = document.getElementById("cfg-bankName").value.trim();
     b.bankHolder = document.getElementById("cfg-bankHolder").value.trim();
+    // Sync manager/address into area building meta (picker chips)
+    const found = findBuildingMeta(b.code);
+    if (found && found.building) {
+      found.building.manager = b.manager;
+      found.building.address = b.address;
+      found.building.floors = b.floors;
+      found.building.collectDay = b.collectDay;
+      found.building.electricRate = b.electricRate;
+      found.building.waterRate = b.waterRate;
+      found.building.serviceFee = b.serviceFee;
+      found.building.vehicleFee = b.vehicleFee;
+    }
+    persistActiveBuilding();
     saveState();
     const sub = document.getElementById("sidebarBuilding");
     if (sub) sub.textContent = "Tòa nhà " + b.code;
+    const meta = document.getElementById("sidebarMeta");
+    if (meta && found) meta.textContent = found.area.name + " · " + (b.manager || "—");
     toast("Đã lưu cấu hình tòa", "success");
   }
 
@@ -2675,6 +2808,7 @@
     goBack,
     goEmployees,
     goCeoReport,
+    setHomeFilter,
     promptCreateArea,
     openCreateBuildingModal,
     saveNewBuilding,
