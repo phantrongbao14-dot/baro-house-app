@@ -1,15 +1,15 @@
-/* Baro House / Tòa nhà 316 — MVP SPA (schema v2) */
+/* Baro House — MVP SPA (schema v3: company › khu vực › tòa) */
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "baro-house-316-v1";
-  const SCHEMA = 2;
+  const STORAGE_KEY = "baro-house-v3";
+  const SCHEMA = 3;
   const TITLES = {
     rooms: "Sơ đồ phòng",
     contracts: "Hợp đồng thuê",
     "thu-tien": "Thu tiền kỳ",
     "kiem-tra-bill": "Kiểm tra Bill",
-    "bao-cao": "Báo cáo",
+    "bao-cao": "Báo cáo tòa",
     customers: "Khách hàng",
     vehicles: "Thống kê xe",
     "cau-hinh": "Cấu hình tòa",
@@ -24,27 +24,57 @@
   let roomsSub = "phong";
   let vehicleQuery = "";
   let currentBuilding = "316";
+  let currentAreaId = "kv1";
+  let shellView = "home"; // home | area | building | employees | ceo-report
   let customerFilter = "living"; // living | moved | all
 
-  function loadState() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed._schema === SCHEMA && parsed.rooms && parsed.rooms.length >= 20) {
-          state = parsed;
-          normalizeAssets();
-          return;
-        }
-      }
-    } catch (_) {}
-    bootFromSeed();
+  function emptyBuildingBundle(meta) {
+    const seed = window.BARO_SEED;
+    const floors = Number(meta.floors) || 1;
+    const building = {
+      name: "Baro House",
+      code: meta.code,
+      address: meta.address || "",
+      area: meta.areaName || "",
+      manager: meta.manager || "",
+      floors: floors,
+      floorAlias: Array.from({ length: floors }, (_, i) => String(i)).join(","),
+      consultPrice: 4000000,
+      electricRate: 3500,
+      waterRate: 20000,
+      serviceFee: 50000,
+      vehicleFee: 100000,
+      collectDay: "ngày 1",
+      waterCalc: "đầu người",
+      bankAccount: "",
+      bankName: "",
+      bankHolder: "",
+      qrPlaceholder: true,
+    };
+    return {
+      building,
+      rooms: [],
+      tenants: [],
+      contracts: [],
+      vehicles: [],
+      assets: {},
+      warehouse: [],
+      rentHistory: {},
+      revenuePeriods: deepClone(seed.revenuePeriods).map((p, i) => ({
+        ...p,
+        opened: i === 0,
+        rows: [],
+      })),
+      monthlyReport: [
+        { month: "7/2026", rent: 0, electric: 0, water: 0, service: 0, vehicle: 0, extra: 0 },
+        { month: "8/2026", rent: 0, electric: 0, water: 0, service: 0, vehicle: 0, extra: 0 },
+      ],
+    };
   }
 
-  function bootFromSeed() {
+  function seededBuildingBundle() {
     const seed = window.BARO_SEED;
-    state = {
-      _schema: SCHEMA,
+    return {
       building: deepClone(seed.building),
       rooms: deepClone(seed.rooms),
       tenants: deepClone(seed.tenants),
@@ -56,8 +86,98 @@
       revenuePeriods: deepClone(seed.revenuePeriods),
       monthlyReport: deepClone(seed.monthlyReport),
     };
-    ensurePeriodRows(state.revenuePeriods[0]);
+  }
+
+  function prepareActivePeriods() {
+    if (!state.revenuePeriods || !state.revenuePeriods.length) return;
+    if (!state.revenuePeriods[0].rows) {
+      ensurePeriodRows(state.revenuePeriods[0]);
+    }
     state.revenuePeriods[0].opened = true;
+  }
+
+  function applyBundleToState(bundle) {
+    state.building = bundle.building;
+    state.rooms = bundle.rooms || [];
+    state.tenants = bundle.tenants || [];
+    state.contracts = bundle.contracts || [];
+    state.vehicles = bundle.vehicles || [];
+    state.assets = bundle.assets || {};
+    state.warehouse = bundle.warehouse || [];
+    state.rentHistory = bundle.rentHistory || {};
+    state.revenuePeriods = bundle.revenuePeriods || [];
+    state.monthlyReport = bundle.monthlyReport || [];
+  }
+
+  function snapshotActiveBundle() {
+    return {
+      building: deepClone(state.building),
+      rooms: deepClone(state.rooms),
+      tenants: deepClone(state.tenants),
+      contracts: deepClone(state.contracts),
+      vehicles: deepClone(state.vehicles),
+      assets: deepClone(state.assets),
+      warehouse: deepClone(state.warehouse),
+      rentHistory: deepClone(state.rentHistory),
+      revenuePeriods: deepClone(state.revenuePeriods),
+      monthlyReport: deepClone(state.monthlyReport),
+    };
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed._schema === SCHEMA && parsed.areas && parsed.buildingStore) {
+          state = parsed;
+          if (!state.employees || !state.employees.length) {
+            state.employees = deepClone(window.BARO_SEED.employees);
+          }
+          currentBuilding = state.activeBuildingCode || "316";
+          const bundle = state.buildingStore[currentBuilding];
+          if (bundle) applyBundleToState(bundle);
+          else applyBundleToState(seededBuildingBundle());
+          normalizeAssets();
+          if (state.rooms && state.rooms.length && state.revenuePeriods && state.revenuePeriods[0] && !state.revenuePeriods[0].rows) {
+            prepareActivePeriods();
+          }
+          return;
+        }
+      }
+    } catch (_) {}
+    // Clear legacy keys so old v1/v2 never collide
+    try {
+      localStorage.removeItem("baro-house-316-v1");
+      localStorage.removeItem("baro-house-v2");
+    } catch (_) {}
+    bootFromSeed();
+  }
+
+  function bootFromSeed() {
+    const seed = window.BARO_SEED;
+    const areas = deepClone(seed.areas);
+    const store = {};
+    areas.forEach((area) => {
+      (area.buildings || []).forEach((b) => {
+        if (b.seeded) store[b.code] = seededBuildingBundle();
+        else store[b.code] = emptyBuildingBundle({ ...b, areaName: area.name });
+      });
+    });
+    if (!store["316"]) store["316"] = seededBuildingBundle();
+    state = {
+      _schema: SCHEMA,
+      employees: deepClone(seed.employees || []),
+      areas,
+      buildingStore: store,
+      activeBuildingCode: "316",
+    };
+    applyBundleToState(store["316"]);
+    currentBuilding = "316";
+    normalizeAssets();
+    prepareActivePeriods();
+    // re-snapshot after period rows filled
+    state.buildingStore["316"] = snapshotActiveBundle();
     saveState();
   }
 
@@ -65,6 +185,9 @@
     if (!state.warehouse) state.warehouse = deepClone(window.BARO_SEED.warehouse);
     if (!state.building) state.building = deepClone(window.BARO_SEED.building);
     if (!state.monthlyReport) state.monthlyReport = deepClone(window.BARO_SEED.monthlyReport);
+    if (!state.employees) state.employees = deepClone(window.BARO_SEED.employees || []);
+    if (!state.areas) state.areas = deepClone(window.BARO_SEED.areas || []);
+    if (!state.buildingStore) state.buildingStore = {};
     Object.keys(state.assets || {}).forEach((rid) => {
       const list = state.assets[rid];
       if (Array.isArray(list) && list.length && typeof list[0] === "string") {
@@ -77,7 +200,15 @@
     });
   }
 
+  function persistActiveBuilding() {
+    if (!state || !state.buildingStore) return;
+    const code = state.activeBuildingCode || currentBuilding || state.building.code;
+    state.buildingStore[code] = snapshotActiveBundle();
+    state.activeBuildingCode = code;
+  }
+
   function saveState() {
+    persistActiveBuilding();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 
@@ -277,6 +408,362 @@
       (Number(row.balancePrev) || 0);
   }
 
+
+  /* ── Hierarchy navigation (L1 company › L2 area › L3 building) ── */
+  function getArea(id) {
+    return (state.areas || []).find((a) => a.id === id);
+  }
+
+  function findBuildingMeta(code) {
+    for (const area of state.areas || []) {
+      const b = (area.buildings || []).find((x) => x.code === code);
+      if (b) return { area, building: b };
+    }
+    return null;
+  }
+
+  function managerEmployees() {
+    return (state.employees || []).filter((e) => {
+      const t = e.title || "";
+      return /Quản lý/i.test(t) || /Trưởng phòng/i.test(t);
+    });
+  }
+
+  function updateChrome() {
+    const back = document.getElementById("btnBack");
+    const menu = document.getElementById("menuToggle");
+    const sidebar = document.getElementById("sidebar");
+    const main = document.getElementById("mainShell");
+    const picker = document.getElementById("buildingPicker");
+    const crumb = document.getElementById("breadcrumb");
+    const title = document.getElementById("pageTitle");
+
+    const onBuilding = shellView === "building";
+    document.body.classList.toggle("mode-building", onBuilding);
+    document.body.classList.toggle("mode-shell", !onBuilding);
+
+    if (sidebar) sidebar.style.display = onBuilding ? "" : "none";
+    if (main) {
+      if (onBuilding) main.style.marginLeft = "";
+      else main.style.marginLeft = "0";
+    }
+    if (menu) menu.style.display = onBuilding ? "" : "none";
+    if (picker) picker.style.display = "none"; // hierarchy replaces picker
+    if (back) back.style.display = shellView === "home" ? "none" : "";
+
+    document.querySelectorAll(".shell-pane").forEach((p) => {
+      p.classList.toggle("active", p.id === "shell-" + shellView);
+    });
+
+    let crumbs = ["Baro House"];
+    let page = "Baro House";
+    if (shellView === "home") {
+      page = "Baro House";
+    } else if (shellView === "area") {
+      const a = getArea(currentAreaId);
+      crumbs.push(a ? a.name : "Khu vực");
+      page = a ? a.name : "Khu vực";
+    } else if (shellView === "building") {
+      const found = findBuildingMeta(currentBuilding);
+      if (found) {
+        crumbs.push(found.area.name);
+        crumbs.push("Tòa " + found.building.code);
+        page = TITLES.rooms;
+      } else {
+        crumbs.push("Tòa " + currentBuilding);
+        page = TITLES.rooms;
+      }
+      const sub = document.getElementById("sidebarBuilding");
+      if (sub) sub.textContent = "Tòa nhà " + currentBuilding;
+      const meta = document.getElementById("sidebarMeta");
+      if (meta && found) {
+        meta.textContent = found.area.name + " · " + (found.building.manager || "—");
+      }
+    } else if (shellView === "employees") {
+      crumbs.push("Nhân viên");
+      page = "Nhân viên";
+    } else if (shellView === "ceo-report") {
+      crumbs.push("Báo cáo");
+      page = "Báo cáo CEO";
+    }
+    if (crumb) crumb.textContent = crumbs.join(" › ");
+    if (title && shellView !== "building") title.textContent = page;
+  }
+
+  function goHome() {
+    if (shellView === "building") persistActiveBuilding();
+    shellView = "home";
+    closePanel();
+    closeSidebar();
+    updateChrome();
+    renderHome();
+    document.getElementById("topbarActions").innerHTML = "";
+    saveState();
+  }
+
+  function goArea(areaId) {
+    if (shellView === "building") persistActiveBuilding();
+    currentAreaId = areaId || currentAreaId;
+    shellView = "area";
+    closePanel();
+    closeSidebar();
+    updateChrome();
+    renderArea();
+    document.getElementById("topbarActions").innerHTML = "";
+    saveState();
+  }
+
+  function goEmployees() {
+    shellView = "employees";
+    closePanel();
+    updateChrome();
+    renderEmployees();
+    document.getElementById("topbarActions").innerHTML = "";
+  }
+
+  function goCeoReport() {
+    shellView = "ceo-report";
+    closePanel();
+    updateChrome();
+    renderCeoReport();
+    document.getElementById("topbarActions").innerHTML = "";
+  }
+
+  function goBack() {
+    if (shellView === "building") goArea(currentAreaId);
+    else if (shellView === "area" || shellView === "employees" || shellView === "ceo-report") goHome();
+  }
+
+  function renderHome() {
+    const grid = document.getElementById("areaGrid");
+    const areas = state.areas || [];
+    grid.innerHTML = areas
+      .map((a) => {
+        const n = (a.buildings || []).length;
+        return `
+        <button type="button" class="nav-card area-card" onclick="App.goArea('${a.id}')">
+          <span class="nav-card-icon">🏢</span>
+          <div>
+            <strong>${esc(a.code)}</strong>
+            <div class="muted">${esc(a.name)} · ${n} tòa</div>
+          </div>
+        </button>`;
+      })
+      .join("");
+    const empN = (state.employees || []).length;
+    const eh = document.getElementById("empCountHome");
+    if (eh) eh.textContent = String(empN);
+  }
+
+  function renderArea() {
+    const area = getArea(currentAreaId);
+    const label = document.getElementById("areaSectionLabel");
+    if (label) label.textContent = area ? "Tòa nhà — " + area.name : "Tòa nhà";
+    const grid = document.getElementById("buildingGrid");
+    const list = (area && area.buildings) || [];
+    if (!list.length) {
+      grid.innerHTML = `<div class="empty-hint">Chưa có tòa nhà. Bấm 「＋ Tạo tòa nhà」 để thêm.</div>`;
+      return;
+    }
+    grid.innerHTML = list
+      .map((b) => `
+        <button type="button" class="nav-card building-card" onclick="App.enterBuilding('${esc(b.code)}')">
+          <span class="nav-card-icon">🏠</span>
+          <div>
+            <strong>Tòa ${esc(b.code)}</strong>
+            <div class="muted">${esc(b.address || "—")}</div>
+            <div class="muted">QL: ${esc(b.manager || "—")} · ${b.floors || "—"} tầng</div>
+          </div>
+        </button>`)
+      .join("");
+  }
+
+  function renderEmployees() {
+    const list = (state.employees || []).slice().sort((a, b) => (a.stt || 0) - (b.stt || 0));
+    const label = document.getElementById("empCountLabel");
+    if (label) label.textContent = list.length + " người";
+    const tbody = document.getElementById("employeeTable");
+    tbody.innerHTML = list
+      .map(
+        (e) => `
+      <tr>
+        <td>${e.stt}</td>
+        <td><strong>${esc(e.name)}</strong></td>
+        <td>${esc(e.title)}</td>
+      </tr>`
+      )
+      .join("");
+  }
+
+  function renderCeoReport() {
+    // Prefer seeded building data for demo charts
+    const seeded = state.buildingStore["316"] || snapshotActiveBundle();
+    const report = seeded.monthlyReport || [];
+    const rooms = seeded.rooms || [];
+    const occ = rooms.filter((r) => r.status === "renting" || r.status === "deposit_hold").length;
+    const vacant = rooms.filter((r) => r.status === "vacant").length;
+    const last = report[report.length - 1] || {};
+    const totalLast =
+      (last.rent || 0) +
+      (last.electric || 0) +
+      (last.water || 0) +
+      (last.service || 0) +
+      (last.vehicle || 0) +
+      (last.extra || 0);
+
+    document.getElementById("ceoReportTiles").innerHTML = `
+      <div class="stat-card"><div class="label">Khu vực</div><div class="value">${(state.areas || []).length}</div></div>
+      <div class="stat-card"><div class="label">Tòa nhà</div><div class="value">${Object.keys(state.buildingStore || {}).length}</div></div>
+      <div class="stat-card"><div class="label">Nhân viên</div><div class="value">${(state.employees || []).length}</div></div>
+      <div class="stat-card"><div class="label">Phòng đang thuê (316)</div><div class="value success">${occ}</div></div>
+      <div class="stat-card"><div class="label">Phòng trống (316)</div><div class="value danger">${vacant}</div></div>
+      <div class="stat-card"><div class="label">DT tháng gần nhất</div><div class="value">${fmtMoney(totalLast)}</div></div>
+    `;
+
+    const maxBar = Math.max(...report.map((m) => m.rent + m.electric + m.water + m.service + m.vehicle + m.extra), 1);
+    document.getElementById("ceoBarChart").innerHTML = `
+      <div class="bar-chart">${report
+        .map((m) => {
+          const t = m.rent + m.electric + m.water + m.service + m.vehicle + m.extra;
+          const h = Math.round((t / maxBar) * 100);
+          return `<div class="bar-col"><div class="bar" style="height:${h}%"></div><div class="bar-label">${esc(m.month)}</div></div>`;
+        })
+        .join("")}</div>`;
+
+    const parts = [
+      ["Thuê", last.rent || 0, "#6D28D9"],
+      ["Điện", last.electric || 0, "#0284C7"],
+      ["Nước", last.water || 0, "#059669"],
+      ["DV", last.service || 0, "#D97706"],
+      ["Xe", last.vehicle || 0, "#DC2626"],
+      ["PS", last.extra || 0, "#64748B"],
+    ];
+    const sum = parts.reduce((s, p) => s + p[1], 0) || 1;
+    let acc = 0;
+    const arcs = parts
+      .map((p) => {
+        const pct = (p[1] / sum) * 100;
+        const start = acc;
+        acc += pct;
+        return `<circle class="donut-seg" cx="18" cy="18" r="15.915" fill="transparent" stroke="${p[2]}" stroke-width="3.5"
+          stroke-dasharray="${pct} ${100 - pct}" stroke-dashoffset="${-start + 25}"></circle>`;
+      })
+      .join("");
+    document.getElementById("ceoDonutChart").innerHTML = `
+      <div class="donut-wrap">
+        <svg viewBox="0 0 36 36" class="donut-svg">${arcs}</svg>
+        <div class="donut-legend">${parts
+          .map((p) => `<div><span class="dot" style="background:${p[2]}"></span>${p[0]} · ${fmtMoney(p[1])}</div>`)
+          .join("")}</div>
+      </div>`;
+
+    const rows = [];
+    (state.areas || []).forEach((a) => {
+      (a.buildings || []).forEach((b) => {
+        rows.push(`<tr><td><strong>${esc(b.code)}</strong></td><td>${esc(a.name)}</td><td>${esc(b.manager || "—")}</td><td>${b.floors || "—"}</td></tr>`);
+      });
+    });
+    document.getElementById("ceoBuildingRows").innerHTML =
+      rows.join("") || `<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Chưa có tòa</td></tr>`;
+  }
+
+  function promptCreateArea() {
+    const name = window.prompt("Tên khu vực (ví dụ: Khu vực 3)");
+    if (!name || !name.trim()) return;
+    const n = (state.areas || []).length + 1;
+    const code = "KV" + n;
+    const id = "kv" + n + "-" + Date.now().toString(36);
+    state.areas.push({ id, code, name: name.trim(), buildings: [] });
+    saveState();
+    toast("Đã tạo " + code + " — " + name.trim(), "success");
+    renderHome();
+  }
+
+  function openCreateBuildingModal() {
+    const mgrOpts = managerEmployees()
+      .map((e) => `<option value="${esc(e.name)}">${esc(e.name)} — ${esc(e.title)}</option>`)
+      .join("");
+    openModal(
+      "Tạo tòa nhà",
+      `
+      <div class="form-group"><label>Mã tòa *</label>
+        <input id="nb-code" placeholder="VD: 318" /></div>
+      <div class="form-group"><label>Địa chỉ</label>
+        <input id="nb-address" placeholder="Địa chỉ tòa nhà" /></div>
+      <div class="form-group"><label>Số tầng</label>
+        <input id="nb-floors" type="number" min="1" max="50" value="5" /></div>
+      <div class="form-group"><label>Quản lý tòa nhà</label>
+        <select id="nb-manager"><option value="">— Chọn quản lý —</option>${mgrOpts}</select></div>
+      `,
+      `<button class="btn" onclick="App.closeModal()">Hủy</button>
+       <button class="btn btn-primary" onclick="App.saveNewBuilding()">Tạo tòa</button>`
+    );
+  }
+
+  function saveNewBuilding() {
+    const code = (document.getElementById("nb-code").value || "").trim();
+    const address = (document.getElementById("nb-address").value || "").trim();
+    const floors = Number(document.getElementById("nb-floors").value) || 1;
+    const manager = document.getElementById("nb-manager").value || "";
+    if (!code) {
+      toast("Nhập mã tòa", "error");
+      return;
+    }
+    if (findBuildingMeta(code)) {
+      toast("Mã tòa đã tồn tại", "error");
+      return;
+    }
+    const area = getArea(currentAreaId);
+    if (!area) {
+      toast("Không tìm thấy khu vực", "error");
+      return;
+    }
+    const meta = {
+      code,
+      name: "Tòa nhà " + code,
+      address,
+      floors,
+      manager,
+      seeded: false,
+    };
+    area.buildings.push(meta);
+    state.buildingStore[code] = emptyBuildingBundle({ ...meta, areaName: area.name });
+    saveState();
+    closeModal();
+    toast("Đã tạo tòa " + code, "success");
+    renderArea();
+  }
+
+  function enterBuilding(code) {
+    persistActiveBuilding();
+    const found = findBuildingMeta(code);
+    if (!found) {
+      toast("Không tìm thấy tòa " + code, "error");
+      return;
+    }
+    currentAreaId = found.area.id;
+    currentBuilding = code;
+    state.activeBuildingCode = code;
+    let bundle = state.buildingStore[code];
+    if (!bundle) {
+      bundle = found.building.seeded ? seededBuildingBundle() : emptyBuildingBundle({ ...found.building, areaName: found.area.name });
+      state.buildingStore[code] = bundle;
+    }
+    applyBundleToState(bundle);
+    normalizeAssets();
+    if (state.rooms.length && state.revenuePeriods[0] && !state.revenuePeriods[0].rows) {
+      prepareActivePeriods();
+      state.buildingStore[code] = snapshotActiveBundle();
+    }
+    shellView = "building";
+    roomFilter = "all";
+    roomsSub = "phong";
+    customerFilter = "living";
+    updateChrome();
+    switchTab("rooms");
+    saveState();
+  }
+
   function switchTab(tab) {
     document.querySelectorAll(".nav-item").forEach((b) => {
       b.classList.toggle("active", b.dataset.tab === tab);
@@ -285,6 +772,13 @@
       p.classList.toggle("active", p.id === "tab-" + tab);
     });
     document.getElementById("pageTitle").textContent = TITLES[tab] || tab;
+    if (shellView === "building") {
+      const found = findBuildingMeta(currentBuilding);
+      const crumb = document.getElementById("breadcrumb");
+      if (crumb && found) {
+        crumb.textContent = ["Baro House", found.area.name, "Tòa " + found.building.code].join(" › ");
+      }
+    }
     renderTopbarActions(tab);
     closePanel();
     closeSidebar();
@@ -1974,13 +2468,18 @@
   }
 
   function resetData() {
-    if (!confirm("Xóa toàn bộ thay đổi và khôi phục dữ liệu mẫu?")) return;
+    if (!confirm("Reset toàn bộ dữ liệu về seed v3? localStorage sẽ bị xóa.")) return;
     localStorage.removeItem(STORAGE_KEY);
-    loadState();
-    closeModal();
-    closePanel();
-    toast("Đã khôi phục dữ liệu mẫu", "success");
-    switchTab("rooms");
+    try {
+      localStorage.removeItem("baro-house-316-v1");
+      localStorage.removeItem("baro-house-v2");
+    } catch (_) {}
+    bootFromSeed();
+    shellView = "home";
+    currentAreaId = "kv1";
+    currentBuilding = "316";
+    goHome();
+    toast("Đã reset seed v3", "success");
   }
 
   function openAddRoomModal() {
@@ -2130,12 +2629,8 @@
   }
 
   function changeBuilding(code) {
-    currentBuilding = code || "316";
-    if (code !== "316") {
-      toast("Tòa " + code + " — stub demo (chỉ xem UI tòa 316)", "info");
-    }
-    const sub = document.getElementById("sidebarBuilding");
-    if (sub) sub.textContent = "Tòa nhà " + currentBuilding;
+    if (!code) return;
+    enterBuilding(code);
   }
 
   /* ── Init + export ── */
@@ -2154,6 +2649,9 @@
     document.getElementById("modalClose").addEventListener("click", closeModal);
     document.getElementById("modalBackdrop").addEventListener("click", closeModal);
 
+    const btnBack = document.getElementById("btnBack");
+    if (btnBack) btnBack.addEventListener("click", goBack);
+
     const subTabs = document.getElementById("roomsSubTabs");
     if (subTabs) {
       subTabs.addEventListener("click", function (e) {
@@ -2167,11 +2665,20 @@
       bsel.addEventListener("change", function () { changeBuilding(bsel.value); });
     }
 
-    switchTab("rooms");
+    goHome();
   }
 
   window.App = {
     setCustomerFilter,
+    goHome,
+    goArea,
+    goBack,
+    goEmployees,
+    goCeoReport,
+    promptCreateArea,
+    openCreateBuildingModal,
+    saveNewBuilding,
+    enterBuilding,
 
     switchTab: switchTab,
     setRoomFilter: setRoomFilter,
