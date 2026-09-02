@@ -1,13 +1,274 @@
-/* Baro House / Tòa nhà 316 — seed data for MVP demo (schema v2) */
+/* Baro House — seed data (schema v3: company › khu vực › tòa) */
 window.BARO_SEED = {
-  schema: 2,
+  schema: 3,
+
+  employees: [
+    {
+      "stt": 1,
+      "title": "Tạp vụ",
+      "name": "Châu Bích Kiều"
+    },
+    {
+      "stt": 2,
+      "title": "Tạp vụ",
+      "name": "Nguyễn Ngọc Tiểu Yến"
+    },
+    {
+      "stt": 3,
+      "title": "Tạp vụ",
+      "name": "Trần Mộng Thu"
+    },
+    {
+      "stt": 4,
+      "title": "Bảo trì",
+      "name": "Nguyễn Hoài Em"
+    },
+    {
+      "stt": 5,
+      "title": "Quản lý",
+      "name": "Nguyễn Khoa Triều Sơn"
+    },
+    {
+      "stt": 6,
+      "title": "Trưởng phòng khu vực 1",
+      "name": "Tạ Anh Tuấn"
+    },
+    {
+      "stt": 7,
+      "title": "Quản lý",
+      "name": "Trịnh Minh Khang"
+    },
+    {
+      "stt": 8,
+      "title": "Quản lý",
+      "name": "Phạm Quang Hiếu"
+    },
+    {
+      "stt": 9,
+      "title": "Quản lý",
+      "name": "Nguyễn Trường Dũ"
+    },
+    {
+      "stt": 10,
+      "title": "Bảo trì",
+      "name": "Huỳnh Văn Rồng"
+    },
+    {
+      "stt": 11,
+      "title": "Bảo trì",
+      "name": "Lý Thiết"
+    },
+    {
+      "stt": 12,
+      "title": "Bảo trì",
+      "name": "Nguyễn Phú Vinh"
+    },
+    {
+      "stt": 13,
+      "title": "Tạp vụ",
+      "name": "Nguyễn Thị Hồng Vân"
+    },
+    {
+      "stt": 14,
+      "title": "Tạp vụ",
+      "name": "Nguyễn Thanh Thúy"
+    },
+    {
+      "stt": 15,
+      "title": "Tạp vụ",
+      "name": "Nguyễn Thị Bích"
+    },
+    {
+      "stt": 16,
+      "title": "Tạp vụ",
+      "name": "Huỳnh Thị Hương"
+    },
+    {
+      "stt": 17,
+      "title": "Trưởng phòng khu vực 2",
+      "name": "Phạm Quốc Trung"
+    },
+    {
+      "stt": 18,
+      "title": "Bảo trì",
+      "name": "Lê Minh Quang"
+    },
+    {
+      "stt": 19,
+      "title": "Bảo trì",
+      "name": "Bùi Văn Thịnh"
+    },
+    {
+      "stt": 20,
+      "title": "Bảo trì",
+      "name": "Trần Bảo Duy"
+    },
+    {
+      "stt": 21,
+      "title": "Bảo trì",
+      "name": "Trương Hoài Nam"
+    },
+    {
+      "stt": 22,
+      "title": "Bảo trì",
+      "name": "Hàng Anh Cường"
+    },
+    {
+      "stt": 23,
+      "title": "Quản lý",
+      "name": "Tôn Trần Thành Luân"
+    },
+    {
+      "stt": 24,
+      "title": "Quản lý",
+      "name": "Vũ Văn Duy"
+    },
+    {
+      "stt": 25,
+      "title": "Quản lý",
+      "name": "Nguyễn Thanh Nhã"
+    },
+    {
+      "stt": 26,
+      "title": "Quản lý",
+      "name": "Mã Trường Nghĩa"
+    },
+    {
+      "stt": 27,
+      "title": "Tạp vụ",
+      "name": "Trần Thị Kim Trang"
+    },
+    {
+      "stt": 28,
+      "title": "Tạp vụ",
+      "name": "Lê Thị Hồng"
+    },
+    {
+      "stt": 29,
+      "title": "Tạp vụ",
+      "name": "Trương Thị Vân"
+    },
+    {
+      "stt": 30,
+      "title": "Tạp vụ",
+      "name": "Nguyễn Thị Thanh Hoa"
+    },
+    {
+      "stt": 31,
+      "title": "Tạp vụ",
+      "name": "Phan Thị Thu An"
+    },
+    {
+      "stt": 32,
+      "title": "Bảo vệ",
+      "name": "Phan Văn Vũ"
+    },
+    {
+      "stt": 33,
+      "title": "Bảo vệ",
+      "name": "Nguyễn Văn Trường"
+    },
+    {
+      "stt": 34,
+      "title": "Bảo vệ",
+      "name": "Phạm Hữu Nghĩa"
+    },
+    {
+      "stt": 35,
+      "title": "Bảo vệ",
+      "name": "Võ Văn Hải"
+    },
+    {
+      "stt": 36,
+      "title": "Bảo vệ",
+      "name": "Phạm Ngọc Trung"
+    },
+    {
+      "stt": 37,
+      "title": "Bảo vệ",
+      "name": "Trần Văn Một"
+    },
+    {
+      "stt": 38,
+      "title": "CEO",
+      "name": "Phan Trọng Bảo"
+    },
+    {
+      "stt": 39,
+      "title": "COO",
+      "name": "Phan Bảo Long"
+    },
+    {
+      "stt": 40,
+      "title": "Hành chính - Kế toán",
+      "name": "Phan Thị Vĩnh Phú"
+    },
+    {
+      "stt": 41,
+      "title": "Trợ lý CEO",
+      "name": "Lê Hoàng Khái"
+    },
+    {
+      "stt": 42,
+      "title": "Trợ lý COO",
+      "name": "Cao Thái An"
+    },
+    {
+      "stt": 43,
+      "title": "Thủ quỹ dự án",
+      "name": "Vũ Thị Huyền"
+    },
+    {
+      "stt": 44,
+      "title": "Kiến trúc sư",
+      "name": "Võ Trần Nhật Minh"
+    },
+    {
+      "stt": 45,
+      "title": "Quản lý dự án",
+      "name": "Bùi Xuân Thanh"
+    }
+  ],
+
+  areas: [
+    {
+      id: "kv1",
+      code: "KV1",
+      name: "Khu vực 1",
+      buildings: [
+        {
+          code: "316",
+          name: "Tòa nhà 316",
+          address: "316 Đường mẫu, TP.HCM",
+          floors: 6,
+          manager: "Nguyễn Khoa Triều Sơn",
+          seeded: true
+        },
+        {
+          code: "316A",
+          name: "Tòa nhà 316A",
+          address: "316A Đường mẫu, TP.HCM",
+          floors: 4,
+          manager: "Trịnh Minh Khang",
+          seeded: false
+        }
+      ]
+    },
+    {
+      id: "kv2",
+      code: "KV2",
+      name: "Khu vực 2",
+      buildings: []
+    }
+  ],
+
 
   building: {
     name: "Baro House",
     code: "316",
     address: "316 Đường mẫu, TP.HCM",
     area: "Khu vực 1",
-    manager: "Quản lý Sơn",
+    manager: "Nguyễn Khoa Triều Sơn",
     floors: 6,
     floorAlias: "G,1,2,3,4,5",
     consultPrice: 4000000,
