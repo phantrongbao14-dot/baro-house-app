@@ -1632,6 +1632,20 @@
   /* ── Customers ── */
   function renderCustomers() {
     const tbody = document.getElementById("customerTable");
+    const living = state.tenants.filter((t) => t.active !== false).length;
+    const movedOut = state.tenants.filter((t) => t.active === false).length;
+    const statsEl = document.getElementById("customerStats");
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="stat-card">
+          <div class="label">Khách đang ở trong tòa nhà</div>
+          <div class="value success">${living}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Khách đã chuyển ra</div>
+          <div class="value danger">${movedOut}</div>
+        </div>`;
+    }
     const list = state.tenants.slice().sort((a, b) => {
       if ((a.active !== false) === (b.active !== false)) return (a.name || "").localeCompare(b.name || "", "vi");
       return a.active === false ? 1 : -1;
