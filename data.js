@@ -306,7 +306,7 @@ window.BARO_SEED = {
           waterRate: 20000,
           serviceFee: 40000,
           vehicleFee: 100000,
-          seeded: true
+          seeded: false
         },
         {
           code: "71A",
